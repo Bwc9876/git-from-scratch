@@ -1,6 +1,6 @@
 {pkgs}: let
   typst-packages = pkgs.fetchgit {
-url = "https://github.com/typst/packages.git";
+    url = "https://github.com/typst/packages.git";
     rev = "34318a0f1877b9244f5ce12917e628b52975db1f";
     sparseCheckout = map (p: "packages/preview/${p}") [
       "fletcher/0.5.7"
