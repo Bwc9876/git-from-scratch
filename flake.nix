@@ -8,7 +8,7 @@
       inherit inputs;
       formatters = {
         "*.nix" = "alejandra .";
-        "*.typ" = "typstyle format-all .";
+        "*.typ" = "typstyle -i index.typ";
       };
       devShell = {
         env = pkgs: {TYPST_PACKAGE_PATH = "${pkgs.plugins}";};
