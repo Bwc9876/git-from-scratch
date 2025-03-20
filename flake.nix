@@ -11,12 +11,8 @@
         "*.typ" = "typstyle format-all .";
       };
       devShell = {
-        env = pkgs: {TYPST_PLUGINS = "${pkgs.plugins}";};
-        shellHook = ''
-          export XDG_DATA_HOME=$(mktemp -d)
-          ln -s $TYPST_PLUGINS/typst $XDG_DATA_HOME/typst
-        '';
-        packages = pkgs: with pkgs; [typstyle tinymist alejandra];
+        env = pkgs: {TYPST_PACKAGE_PATH = "${pkgs.plugins}";};
+        packages = pkgs: with pkgs; [typst typstyle tinymist alejandra];
       };
     };
 }

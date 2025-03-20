@@ -1,3 +1,6 @@
+build:
+  nix build .#
+
 watch:
   nix develop -c typst watch index.typ
 

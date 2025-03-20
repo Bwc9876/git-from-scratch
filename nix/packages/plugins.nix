@@ -20,8 +20,8 @@
   };
 in
   pkgs.runCommand "plugins-dir" {} ''
-    mkdir -p $out/typst/packages
-    mkdir -p $out/typst/packages/local/catppuccin
-    ln -s ${catppuccin} $out/typst/packages/local/catppuccin/1.0.0
-    ln -s ${typst-packages}/packages/preview $out/typst/packages/preview
+    mkdir -p $out
+    mkdir -p $out/local/catppuccin
+    ln -s ${catppuccin} $out/local/catppuccin/1.0.0
+    ln -s ${typst-packages}/packages/preview $out/preview
   ''
