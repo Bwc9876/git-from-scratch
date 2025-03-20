@@ -4,6 +4,13 @@
 #import "@preview/fletcher:0.5.7"
 #import themes.simple: *
 
+#let info = config-info(
+  title: "Git From Scratch",
+  subtitle: "A bottom-up approach to learning Git",
+  author: "Ben C",
+  institution: "West Chester University Computer Science Club",
+)
+
 #let cetz-canvas = touying-reducer.with(
   reduce: cetz.canvas,
   cover: cetz.draw.hide.with(bounds: true),
@@ -16,8 +23,10 @@
 #let catp = flavors.mocha
 #let colors = catp.colors
 #show: simple-theme.with(
+  info,
+  header: self => [*#self.info.title*],
+  footer: self => self.info.author,
   aspect-ratio: "16-9",
-  footer: [Ben C],
   primary: colors.blue.rgb,
 )
 #show: catppuccin.with(catp, code-block: true, code-syntax: true)
@@ -40,27 +49,31 @@
   text(rgb("#F75C2F"), box[ #c ])
 }
 
+#let mono(c) = {
+  text(box[ #c ], font: "DejaVu Sans Mono", size: 20pt)
+}
+
 #let acc1(c) = {
-  text(colors.mauve.rgb, box[ #c ])
+  text(colors.mauve.rgb, mono[ #c ])
 }
 
 #let acc2(c) = {
-  text(colors.green.rgb, box[ #c ])
+  text(colors.green.rgb, mono[ #c ])
 }
 
 #let acc3(c) = {
-  text(colors.yellow.rgb, box[ #c ])
+  text(colors.yellow.rgb, mono[ #c ])
 }
 
 #let acc4(c) = {
-  text(colors.red.rgb, box[ #c ])
+  text(colors.red.rgb, mono[ #c ])
 }
 
 #let acgrey(c) = {
-  text(colors.subtext0.rgb, box[ #c ])
+  text(colors.subtext0.rgb, mono[ #c ])
 }
 
-= Git From Scratch
+= #image("git-logo.svg", width: 25%, alt: "The Git Logo")\ *Git From Scratch*\ #acc1[--]#acc2[--]#acc3[--]#acc4[--]
 
 #emph[#secondary[A bottom-up approach to learning Git]]
 
@@ -72,7 +85,7 @@ developers to collaborate on a project without needing a central server
 to do so.
 
 It’s the de facto standard in both open source and enterprise contexts.
-No matter what field of CS you choose to pursue you’ll most likely
+No matter what field of CS you choose to pursue you’ll likely
 encounter Git.
 
 == How does it Work?
@@ -80,11 +93,11 @@ encounter Git.
 
 At a very high level:
 
-- Git allows you to take "snapshots" of your current project \(commits)
-- Commits are chained together to create a history \(branch)
+- Git allows you to take "snapshots" of your current project \(*commits*)
+- Commits are chained together to create a history \(*branches*)
 - Developers can create multiple branches to work on the project
   simultaneously
-- After work is done, developers merge changes back to a "main" branch
+- After work is done, developers *merge* changes back to a common branch
 
 == Okay, But How does it #emph[actually] work?
 <okay-but-how-does-it-actually-work>
@@ -93,7 +106,7 @@ You came to the right place!
 
 The Git CLI is split up into two types of commands.
 
-- "Porcelain" commands, the ones you’re likely used to \(`commit`,
+- "Porcelain" commands, the ones you’re likely to have used \(`commit`,
   `add`, `checkout`, etc)
 - #strong["Plumbing"] commands, low-level commands that porcelain
   commands call under-the-hood \(we’ll see these later)
@@ -105,9 +118,10 @@ The Git CLI is split up into two types of commands.
   -- Preston Thorpe
 ]
 
-This presentation will go over the low-level
-plumbing commands of Git. By doing this, we gain a deeper understanding
-of exactly what Git is doing when we run porcelain commands.
+To truly understand something, we need to forego all notions of "magic". Don't
+be scared to jump into the details, understand things for what they truly
+are and you'll grow an intuition instead of surface-level knowledge. Many times
+it's a lot simpler than you think!
 
 == Git Repository Structure
 <git-repository-structure>
@@ -127,7 +141,8 @@ them.
 
 - `objects/`: The object store, the most important part of `.git`
 - `refs/`: A list of references to objects in the object store
-- `HEAD`: A special ref that points to the current working branch
+- `HEAD`: A symbolic ref that points to the current working branch
+- `config`: A configuration file for this repository
 
 We’ll start out with the object store and explain `refs` later.
 
@@ -144,8 +159,8 @@ mechanism for many Git concepts.
 
 == Object Hahing And Storage
 
-Objects are #emph[content addressed] within the `objects/` directory. To
-get the "name" of an object we get the SHA-1 hash of object’s contents.
+Objects are *content-addressed* within the `objects/` directory. To
+get the "name" of an object we get the SHA-1 hash of that object’s contents.
 This hash serves as a unique identifier for that object, any references
 to it will use this hash.
 
@@ -183,12 +198,12 @@ That hash is split up.
 ][
   Let’s consider an object with the contents #acc3[Hello World!]
 
-  #acc1[blob] #acc2[12]#acgrey[\\0]#acc3[Hello World!]
+  #mono[#acc1[blob] #acc2[12]#acgrey[\\0]#acc3[Hello World!]]
 ]
 
 == Important Notes About Object Storage
 
-- An object's hash *includes* the metadata header, it's critical we add this or all
+- An object's hash _includes_ the metadata header, it's critical we add this or all
   the hashes will be wrong!
 
 #pause
@@ -210,7 +225,7 @@ We’ve already seen blobs before, with the "Hello World!" example.
 
 == Blob Objects
 
-Blobs are the simplest type of objects and simply store data
+*Blobs* are the simplest type of objects and simply store data
 verbatim within them.
 
 #acc1[blob] #acc2[12]#acgrey[\\0]#acc3[Hello World!]
@@ -223,7 +238,7 @@ Other types of objects get a bit more complicated.
 == Tree Objects
 <tree-objects>
 
-Trees are the next level up from blobs, they store a directory of files
+*Trees* are the next level up from blobs, they store a directory of files
 and other trees. A tree is to a blob as a folder is to a file.
 
 A tree starts with the same metadata all git objects have, and is then
@@ -231,16 +246,15 @@ followed with a structured list of #emph[leaves];.
 
 == Tree Leaves
 
-A leaf stores three pieces of information.
+A *leaf* stores three pieces of information.
 
 + #acc1[mode] of the leaf \(permissions) followed by an ASCII space
-+ #acc2[name] of the leaf \(file name or sub-folder name), followed by a null
-  terminator #acgrey[\\0]
++ #acc2[name] of the leaf \(file name or sub-folder name), followed by #acgrey[\\0]
 + #acc3[hash] of the object containing this leaf’s contents
 
 == Tree Object Example
 
-Let’s consider a tree of #emph[this repo’s] files.
+Let’s consider a tree of a few of this repo's files.
 
 (remember: #acc1[mode] #acc2[name]#acgrey[\\0]#acc3[hash])
 
@@ -260,10 +274,10 @@ and submodules in trees.
 == Side Tangent - Self-referential Tree
 <side-tangent---self-referential-tree>
 
-Tree objects can reference other trees. What would happen if a tree referenced itself?".
+Tree objects can reference other trees. What would happen if a tree referenced _itself_?".
 
 Making a cycle in Git like this is an interesting feat. Think
-about what that tree would look like, we’d at least need a leaf that
+about what that tree would look like, we’d need a leaf that
 looks something like this:
 
 - #acc1[100644] #acc2[myself]#acgrey[\\0]#acc3[\<the tree’s hash\>]
@@ -275,8 +289,7 @@ depends on us knowing the hash!
 
 If we edited the Git source code in some way that allowed us to
 reference a tree within itself \(someone did this by using a weaker
-hashing algorithm and figuring out the hash), Git will
-#strong[segfault];.
+hashing algorithm and brute-forcing the hash), Git will segfault (crash).
 
 However, because Git uses SHA-1 which is good enough™, we can be sure
 that tree objects will never contain cycles.
@@ -309,15 +322,12 @@ we’ll likely have to recompute hashes for many different objects.
 == Commit Objects
 <commit-objects>
 
-Commits are a core part of Git, we're starting to see how porcelain commands
-connect to the plumbing ones.
-
-A commit is a way of marking a tree object with a message, author, time,
+A *commit* marks a tree object with a message, author, time,
 and even cryptographic signatures. Commits can store any arbitrary data but we'll
 stick to common fields.
 
-A commit object starts out with a series of newline-delimited
-#emph[headers];. Each header consists of a #acc1[name], a space, and then a
+The format starts out with a series of newline-delimited
+*headers*. Each header consists of a #acc1[name], a space, and then a
 #acc2[value]. Following these headers are #emph[two] newlines and then the
 commit’s #acc3[message].
 
@@ -536,13 +546,15 @@ Refspecs follow the format +#acc1[\<SRC\>]:#acc2[\<DEST\>].
 Let’s see an example of how this looks in a config file. You’ll also
 notice the #acc4[name] of the remote and the #acc3[url] of the remote.
 
-\[remote "#acc4[origin]"\] \
-url \= #acc3[git\@github.com:Bwc9876/nixos-config.git] \
-fetch \= +#acc1[refs/heads/\*]:#acc2[refs/remotes/#acc4[origin]/\*]
+#mono[
+  \[remote "#acc4[origin]"\] \
+  url \= #acc3[git\@github.com:Bwc9876/nixos-config.git] \
+  fetch \= +#acc1[refs/heads/\*]:#acc2[refs/remotes/#acc4[origin]/\*]
 
-Here we see that all refs under #acc1[refs/heads/\*] on
-#acc3[git\@github.com:Bwc9876/nixos-config.git] will be placed in
-#acc2[refs/remotes/#acc4[origin]/\*] locally.
+  Here we see that all refs under #acc1[refs/heads/\*] on
+  #acc3[git\@github.com:Bwc9876/nixos-config.git] will be placed in
+  #acc2[refs/remotes/#acc4[origin]/\*] locally.
+]
 
 ---
 
@@ -559,12 +571,14 @@ point to the latest commit.
 Tracking branches are a config option that let you indicate that a #acc2[local
 branch] should be kept in sync with a #acc1[remote one] on a specified #acc3[remote].
 
-[branch "#acc1[main]"] \
-remote = #acc3[origin] \
-merge = #acc2[refs/heads/main] \
+#mono[
+  [branch "#acc1[main]"] \
+  remote = #acc3[origin] \
+  merge = #acc2[refs/heads/main] \
+]
 
-Here we see a rule setup to make #acc2[refs/heads/main] track #acc3[origin]/#acc1[main] by
-merging changes from the remote to the local.
+Here we see a rule to make #acc2[refs/heads/main] track #acc3[origin]/#acc1[main] by
+_merging_ changes from the remote to the local.
 
 == How `git pull` and `git push` work
 
@@ -576,6 +590,7 @@ When pulling:
 - Merge the newly updated remote ref into our local one (`git merge`)
 
 Depending on configuration, `pull` can also rebase the branch instead if desired.
+It will also fast-forward automatically (if possible).
 
 ---
 
@@ -584,3 +599,22 @@ When pushing:
 - Connect to the remote and upload any objects and update the ref on the server's side
 - Update the remote ref on our side to reflect this change
 
+== Conclusion
+
+This presentation went over the main parts of Git inside and out. We learned about...
+
++ The object store
++ The types of objects (blob, tree, commit, tag)
++ The Git index
++ Refs and `HEAD`
++ Combining branches with `merge` and `rebase`
++ `restore`, `reset`, and `revert`
++ Remote refs and tracking branches
+
+== References and Resources
+
+Thank you for listening!
+
+- Pro Git: #link("https://git-scm.com/book/en/v2")
+- Write Yourself a Git!: #link("https://wyag.thb.lt/")
+- Magic Isn't Real: #link("https://pthorpe92.dev/magic/")
