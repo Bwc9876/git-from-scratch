@@ -13,6 +13,3 @@ update:
 edit:
   nix develop -c nvim index.typ
 
-build:
-  nix build .#
-

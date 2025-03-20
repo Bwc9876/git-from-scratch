@@ -130,8 +130,8 @@ A Git repository is any directory with a well-formed `.git/` folder.
 This presentation is stored in a repository!
 
 `.git` stores all of your repository’s history, including commits,
-branches, tags, etc. The folder containing `.git/` will read and
-information from `.git/` when you run various Git commands.
+branches, tags, etc. The folder containing `.git/` will read and write
+information from `.git/` when you run Git commands.
 
 == `.git` Layout
 <-git-layout>
@@ -144,7 +144,7 @@ them.
 - `HEAD`: A symbolic ref that points to the current working branch
 - `config`: A configuration file for this repository
 
-We’ll start out with the object store and explain `refs` later.
+We’ll start out with the object store.
 
 == The Object Store
 <the-object-store>
@@ -164,17 +164,17 @@ get the "name" of an object we get the SHA-1 hash of that object’s contents.
 This hash serves as a unique identifier for that object, any references
 to it will use this hash.
 
-To store an object, Git will take the #strong[first two] characters of
-the hash and create a folder with them, and then place the object data
-in a file names with the rest of the hash.
+To store an object, Git will use the #strong[first two] characters of
+the hash to create a new folder in `.git/objects`. Then Git will place the object data
+in a file named with the rest of the hash.
 
 == Object Hashing Example
 <object-hashing-storage>
 
-The silly cat is hashed into:\
-#acc1[9a]#acc2[143d55e1bf0e61c61def985dade29d8ed53d85].
+Let's consider an object that's hashed into:\
+#acc1[9a]#acc2[143d55e1bf0e61c61def985dade29d8ed53d85]
 
-That hash is split up.
+That hash is split up:
 
 - #acc1[9a] becomes the name of a folder in `.git/objects/`
 - #acc2[143d55e...] becomes a file in that
@@ -186,7 +186,7 @@ That hash is split up.
 <anatomy-of-an-object>
 
 #slide[
-  Each Git object will start with important pieces of metadata.
+  Every Git object is structured like so:
 
   + #acc1[type] of the object, followed by an ASCII space
   + #acc2[size] of the object, encoded as a string \(#emph[not] just the number
@@ -206,15 +206,13 @@ That hash is split up.
 - An object's hash _includes_ the metadata header, it's critical we add this or all
   the hashes will be wrong!
 
-#pause
-
 - Git stores objects by zlib compressing them to save space, so you can't simply read this
   data with `cat`
 
 == Types of Objects
 <types-of-objects>
 
-There are four major types of objects that Git stores.
+There are four types of objects we'll go over.
 
 + Blobs - Normal files, like that silly cat picture from before
 + Trees - Directories containing blobs or other trees
@@ -225,7 +223,7 @@ We’ve already seen blobs before, with the "Hello World!" example.
 
 == Blob Objects
 
-*Blobs* are the simplest type of objects and simply store data
+*Blobs* are the simplest type of objects and store data
 verbatim within them.
 
 #acc1[blob] #acc2[12]#acgrey[\\0]#acc3[Hello World!]
@@ -238,15 +236,11 @@ Other types of objects get a bit more complicated.
 == Tree Objects
 <tree-objects>
 
-*Trees* are the next level up from blobs, they store a directory of files
+*Trees* are the next level up from blobs, they store a set of files
 and other trees. A tree is to a blob as a folder is to a file.
 
-A tree starts with the same metadata all git objects have, and is then
-followed with a structured list of #emph[leaves];.
-
-== Tree Leaves
-
-A *leaf* stores three pieces of information.
+A tree is structured with a series of *leaves* stored back-to-back.
+A leaf stores three pieces of information:
 
 + #acc1[mode] of the leaf \(permissions) followed by an ASCII space
 + #acc2[name] of the leaf \(file name or sub-folder name), followed by #acgrey[\\0]
@@ -254,7 +248,7 @@ A *leaf* stores three pieces of information.
 
 == Tree Object Example
 
-Let’s consider a tree of a few of this repo's files.
+Let’s consider a tree of this repo's files.
 
 (remember: #acc1[mode] #acc2[name]#acgrey[\\0]#acc3[hash])
 
@@ -268,13 +262,13 @@ Let’s consider a tree of a few of this repo's files.
     \\0
   ]#acc3[1426b63b66a8de0e2769ae7573c2918e60d84187]
 
-Here we can see two files and one subdirectory stored. Git can also store symlinks
-and submodules in trees.
+Here we can see two files and one subdirectory stored. Trees can store additional types
+of leaves, such as symlinks.
 
 == Side Tangent - Self-referential Tree
 <side-tangent---self-referential-tree>
 
-Tree objects can reference other trees. What would happen if a tree referenced _itself_?".
+Tree objects can reference other trees. What would happen if a tree referenced itself?
 
 Making a cycle in Git like this is an interesting feat. Think
 about what that tree would look like, we’d need a leaf that
@@ -282,25 +276,28 @@ looks something like this:
 
 - #acc1[100644] #acc2[myself]#acgrey[\\0]#acc3[\<the tree’s hash\>]
 
----
-
 But we don’t know the hash of our tree, how can we reference it? The correct hash
-depends on us knowing the hash!
+depends on us already knowing the hash!
+
+---
 
 If we edited the Git source code in some way that allowed us to
 reference a tree within itself \(someone did this by using a weaker
 hashing algorithm and brute-forcing the hash), Git will segfault (crash).
 
-However, because Git uses SHA-1 which is good enough™, we can be sure
+However, because Git uses SHA-1 (by default) which is good enough™, we can be sure
 that tree objects will never contain cycles.
 
 == The Git Index - How `git add` works
 <the-git-index---how-git-add-works>
 
-When staging changes in Git via `git add` your files are added to a
+When staging changes in Git via `git add`, your files are added to a
 special file, `.git/index`. This file keeps track of staged changes in
-your working tree and is used by Git to create a tree object when
+your working tree and is used to create a tree object when
 committing.
+
+This file's format isn't too important, it's effectively just a list of files that have changed,
+and how they've changed.
 
 You can manually add files to the index via `git update-index --add`.
 This command acts as a backend to the `git add` and `git rm` commands.
@@ -310,10 +307,10 @@ This command acts as a backend to the `git add` and `git rm` commands.
 
 We address objects based on that object’s contents.
 A tree’s contents contains references to other objects,
-meaning we by extension address a tree by the contents of all of its leaves.
+meaning we address a tree by the contents of all of its leaves by extension.
 
-Subtrees cascade this effect upwards. We can uniquely identify the
-contents of a directory #emph[and all sub-directories] based on its
+Nested trees cascade this effect upwards. We can uniquely identify the
+contents of an entire directory #emph[and all sub-directories] based on just one
 hash.
 
 This #emph[does] mean whenever we update even one part of our project,
@@ -323,7 +320,7 @@ we’ll likely have to recompute hashes for many different objects.
 <commit-objects>
 
 A *commit* marks a tree object with a message, author, time,
-and even cryptographic signatures. Commits can store any arbitrary data but we'll
+and even cryptographic signature. Commits can store arbitrary data but we'll
 stick to common fields.
 
 The format starts out with a series of newline-delimited
@@ -348,9 +345,9 @@ Let’s look at an example commit.
 
 Here’s what each header means in this commit object.
 
-- `tree`: The tree object this commit points to
+- `tree`: The tree object this commit is marking
 - `parent` \(optional): The parent\(s) of this commit \(previous commit)
-- `author`: Who authored the changes this commit does \(can have
+- `author`: Who authored the changes this commit performs \(can have
   multiple)
 - `committer`: The person who created the commit object
 - `gpgsig` \(optional): A cryptographic signature to verify the
@@ -363,7 +360,7 @@ Commits can contain more data as well, but these are the most common.
 
 When you change a file and commit it, Git will create a new, separate object
 for the new state of the file. For large files, this can waste a lot of
-space if you just change a few lines of a giant file.
+space if you just change a few lines.
 
 Git will occasionally \(usually when pushing) #emph[pack] objects,
 storing diffs between two file states instead of duplicating the contents. This
@@ -377,14 +374,14 @@ transparently. You can also have Git manually pack all objects by running
 Refs are references to objects within the object store. Many
 higher-level Git concepts such as branches and tags are stored as refs.
 
-Refs are primarily stored in `.git/refs`, each ref file is simply a text
+Refs are primarily stored in `.git/refs`, each ref is a text
 file containing the object hash that the ref points to.
 
-Primarily refs point to commit objects, both branches and tags work this
-way. However, tags can technically point to any object, this isn't
-usually used however.
+Refs primarily point to commit objects; branches work this
+way. However, tags can technically point to any object; this isn't
+usually used, however.
 
-== Branches vs.~Tags
+== Tags vs.~Branches
 <branches-vs.-tags>
 
 - #strong[Tags] represent static points in time for a project, this is
@@ -420,14 +417,16 @@ in `.git/HEAD`.
 branch you have checked out. You can run `git symbolic-ref .git/HEAD` to view this,
 if you were on branch `main` it would output `refs/heads/main`.
 
----
+== Checking Out Trees
 
-While symbolic refs may not point to non-refs. `HEAD` can instead be normal ref instead of symbolic,
-poining to a commit object.
+The act of replacing the current project with one from a tree object is called a
+*checkout*. You can checkout any "tree-ish" object, which includes refs, trees, commits, and tags.
 
-This creates a "Detached `HEAD`" state, which means commits we make won’t affect any specific branch.
-You may find yourself on this state when switching branches and making a mistake. Not to worry! You
-can always go back to your main branch with `git checkout main`.
+Upon checking out a *branch*, `HEAD` is updated to point to it. Any commits made while `HEAD` has
+a branch checked out will update that ref to point to the new commit.
+
+Upon checking out a *tag* or *commit* directly, `HEAD` points directly to the object hash.
+This results in a "Detached `HEAD`" state, which means commits we make won’t affect any specific branch.
 
 == Rev Parse
 <rev-parse>
@@ -435,10 +434,10 @@ can always go back to your main branch with `git checkout main`.
 Often times when working with Git porcelain commands you’ll be told to
 enter a commit-ish or a tree-ish value.
 
-- #emph[tree];-ish: A reference to a tree object, this includes a named
+- #emph[tree];-ish: A reference to a tree object, this includes a
   ref, a tag object, or a commit object
 - #emph[commit];-ish: Reference to a commit object, this can be a ref or
-  a tag object as well
+  a tag object
 
 If you’re ever curious how Git will resolve a given value, you can use
 the `rev-parse` command to see what Git evaluates it as. `rev-parse`
@@ -472,25 +471,25 @@ Here are some useful tips for referring to objects.
 
 == Combining Branches - Merging
 
-Often times we'll want to take changes from one or more branches and apply
+Often times we'll want to take changes from one or more other branches and apply
 them to the current one.
 
 One way of doing this is a *merge* commit. This is a commit that will have
 two parents, the head of the current branch and the head of the other branch.
 
-If two branches share a common history and one is simply behind the other,
-a *fast-forward* occurs. This doesn't create a new commit and simply sets
+If two branches share a common history and one is behind the other,
+a *fast-forward* occurs. This doesn't create a new commit and sets
 the "behind" branch to point to the head of the source branch.
 
 == Combining Branches - Rebasing
 
-An alternative way to combine branches is a *rebase*. Rebasing simply applies commits
+An alternative way to combine branches is a *rebase*. Rebasing applies commits
 from one branch to another, without making a merge commit. This is effectively just copying
 and pasting changes from one branch to another.
 
 Rebasing can do a lot more than just combine branches however. Another common use case
 is to squash a set of commits into one, cleaning up your history. A very user-friendly way
-to do complex rebasing is `git rebase -i [some commit]`. This will open up an editor that lets
+to do complex rebasing is `git rebase -i [commit-ish]`. This will open up an editor that lets
 you interactively rebase the commits specified.
 
 == Restore vs.~Reset vs.~Revert
@@ -502,7 +501,7 @@ underlying system.
 
 Some important terms:
 
-- `HEAD`: the current head of the branch your working on
+- `HEAD`: the current head of the branch you're working on
 - index: the staging area that files get added to with `git add`
 - working tree: the current structure of your project, unstaged changes
 
@@ -531,7 +530,7 @@ With this in mind let’s break down each command.
 == Remote Refs
 <remote-refs>
 
-A set of branches kept in sync from a different machine is called a remote.
+A set of branches kept in sync from a different machine is called a *remote* ref.
 Remotes are listed in `.git/refs/remotes`, and will be synced according
 to the #emph[refspec] present in `.git/config`.
 
@@ -543,18 +542,18 @@ Refspecs follow the format +#acc1[\<SRC\>]:#acc2[\<DEST\>].
 
 ---
 
-Let’s see an example of how this looks in a config file. You’ll also
+Let’s see an example of this in a config file. You’ll also
 notice the #acc4[name] of the remote and the #acc3[url] of the remote.
 
 #mono[
   \[remote "#acc4[origin]"\] \
   url \= #acc3[git\@github.com:Bwc9876/nixos-config.git] \
   fetch \= +#acc1[refs/heads/\*]:#acc2[refs/remotes/#acc4[origin]/\*]
-
-  Here we see that all refs under #acc1[refs/heads/\*] on
-  #acc3[git\@github.com:Bwc9876/nixos-config.git] will be placed in
-  #acc2[refs/remotes/#acc4[origin]/\*] locally.
 ]
+
+Here we see that all refs under #acc1[refs/heads/\*] on
+#acc3[git\@github.com:Bwc9876/nixos-config.git] will be placed in
+#acc2[refs/remotes/#acc4[origin]/\*] locally.
 
 ---
 
@@ -563,7 +562,7 @@ a way of seeing what the refs were set to the last time we *fetched*.
 
 To update remote refs from their respective remote, we run the `git fetch` command.
 This will download any needed objects automatically and update the remote ref to
-point to the latest commit.
+point to the latest commit on the server.
 
 == Tracking Branches
 <tracking-branches>
