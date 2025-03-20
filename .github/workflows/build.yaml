@@ -1,7 +1,10 @@
 name: Build PDF
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to release with
+        type: string
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -22,3 +25,4 @@ jobs:
         with:
           body: Please download the PDF from this release's assets
           files: git-from-scratch.pdf
+          tag: ${{inputs.tag}}
