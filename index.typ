@@ -36,6 +36,10 @@
   radius: 4pt,
 )
 
+#let secondary(c) = {
+  text(rgb("#F75C2F"), box[ #c ])
+}
+
 #let acc1(c) = {
   text(colors.mauve.rgb, box[ #c ])
 }
@@ -58,7 +62,7 @@
 
 = Git From Scratch
 
-_A bottom-up approach to learning Git_
+#emph[#secondary[A bottom-up approach to learning Git]]
 
 == What is Git?
 <what-is-git>
@@ -479,64 +483,6 @@ is to squash a set of commits into one, cleaning up your history. A very user-fr
 to do complex rebasing is `git rebase -i [some commit]`. This will open up an editor that lets
 you interactively rebase the commits specified.
 
-== Remote Refs
-<remote-refs>
-
-A set of branches coming from a different machine is called a remote.
-Remotes are listed in `.git/refs/remotes`, and will be synced according
-to the #emph[refspec] present in `.git/config`.
-
-Refspecs follow the format +#acc1[\<SRC\>]:#acc2[\<DEST\>].
-
-- #acc1[\<SRC\>] denotes the relative path on the remote server to grab a ref
-  from
-- #acc2[\<DEST\>] denotes where to save the ref locally
-
-== Refspec Example
-
-Let’s see an example of how this looks in a config file. You’ll also
-notice the #acc3[name] of the remote and the #acc4[url] of the remote.
-
-\[remote "#acc4[origin]"\] \
-url \= #acc3[git\@github.com:Bwc9876/nixos-config.git] \
-fetch \= +#acc1[refs/heads/\*]:#acc2[refs/remotes/#acc4[origin]/\*]
-
-Here we see that all refs under #acc1[refs/heads/\*] on
-#acc4[git\@github.com:Bwc9876/nixos-config.git] will be placed in
-#acc2[refs/remotes/#acc3[origin]/\*] locally.
-
-== Tracking Branches
-<tracking-branches>
-
-Tracking branches are a config option that let you indicate that a #acc2[local
-branch] should be kept in sync with a #acc1[remote one] on a specified #acc3[origin].
-
-[branch "#acc1[main]"] \
-remote = #acc3[origin] \
-merge = #acc2[refs/heads/main] \
-
-Here we see a rule setup to make #acc2[refs/heads/main] track #acc3[origin]/#acc1[main] by
-merging changes from the remote to the local. There are other ways that we can sync changes
-but we'll save that for another time.
-
-
----
-
-When using tracking branches you’ll use a set of porcelain commands,
-they can be a bit confusing when you don’t know how tracking branches
-work so here’s an overview.
-
-- `git fetch`: Update a remote ref / fetch refs from a remote
-- `git pull`: Update a local branch from the remote ref it’s set to
-  track \(this implicitly calls `fetch`). It will either merge the
-  remote changes of fast-forward to them
-- `git push`: Sync the remote ref with the local one and push the
-  changes to the remote url
-
-
-
-
-
 == Restore vs.~Reset vs.~Revert
 <restore-vs.-reset-vs.-revert>
 
@@ -550,12 +496,17 @@ Some important terms:
 - index: the staging area that files get added to with `git add`
 - working tree: the current structure of your project, unstaged changes
 
+---
+
 With this in mind let’s break down each command.
 
 - `git restore`: This command will update files in your working tree
   with data from your index
 - `git restore --staged`: This command updates your index from the
   `HEAD` or any given commit
+
+---
+
 - `git reset [path]`: This command also updates your index from a
   commit, `restore --staged` is the newer interface
 - `git reset [commit]`: This command will set `HEAD` to a given commit,
@@ -567,7 +518,69 @@ With this in mind let’s break down each command.
 - `git revert`: Create a new commit that undoes the changes a previous
   commit made
 
-#quote(block: true)[
-  \[!note\] Using `git reset --hard HEAD` will reset your working tree and
-  index entirely, useful for when you’ve found yourself in a weird state
-]
+== Remote Refs
+<remote-refs>
+
+A set of branches kept in sync from a different machine is called a remote.
+Remotes are listed in `.git/refs/remotes`, and will be synced according
+to the #emph[refspec] present in `.git/config`.
+
+Refspecs follow the format +#acc1[\<SRC\>]:#acc2[\<DEST\>].
+
+- #acc1[\<SRC\>] denotes the relative path on the remote server to grab a ref
+  from
+- #acc2[\<DEST\>] denotes where to save the ref locally
+
+---
+
+Let’s see an example of how this looks in a config file. You’ll also
+notice the #acc4[name] of the remote and the #acc3[url] of the remote.
+
+\[remote "#acc4[origin]"\] \
+url \= #acc3[git\@github.com:Bwc9876/nixos-config.git] \
+fetch \= +#acc1[refs/heads/\*]:#acc2[refs/remotes/#acc4[origin]/\*]
+
+Here we see that all refs under #acc1[refs/heads/\*] on
+#acc3[git\@github.com:Bwc9876/nixos-config.git] will be placed in
+#acc2[refs/remotes/#acc4[origin]/\*] locally.
+
+---
+
+Note that remote refs are _read-only_, we never move them locally. Remote refs are
+a way of seeing what the refs were set to the last time we *fetched*.
+
+To update remote refs from their respective remote, we run the `git fetch` command.
+This will download any needed objects automatically and update the remote ref to
+point to the latest commit.
+
+== Tracking Branches
+<tracking-branches>
+
+Tracking branches are a config option that let you indicate that a #acc2[local
+branch] should be kept in sync with a #acc1[remote one] on a specified #acc3[remote].
+
+[branch "#acc1[main]"] \
+remote = #acc3[origin] \
+merge = #acc2[refs/heads/main] \
+
+Here we see a rule setup to make #acc2[refs/heads/main] track #acc3[origin]/#acc1[main] by
+merging changes from the remote to the local.
+
+== How `git pull` and `git push` work
+
+Tracking branches allow us to use `git pull` and `git push`.
+
+When pulling:
+
+- Update the remote ref that our local branch tracks (`git fetch`)
+- Merge the newly updated remote ref into our local one (`git merge`)
+
+Depending on configuration, `pull` can also rebase the branch instead if desired.
+
+---
+
+When pushing:
+
+- Connect to the remote and upload any objects and update the ref on the server's side
+- Update the remote ref on our side to reflect this change
+

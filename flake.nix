@@ -16,7 +16,7 @@
           export XDG_DATA_HOME=$(mktemp -d)
           ln -s $TYPST_PLUGINS/typst $XDG_DATA_HOME/typst
         '';
-        packages = pkgs: with pkgs; [typstyle alejandra];
+        packages = pkgs: with pkgs; [typstyle tinymist alejandra];
       };
     };
 }
