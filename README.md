@@ -6,8 +6,8 @@ Presentation slides for West Chester University Computer Science Club.
 
 ## Getting the slides
 
-Easiest option is to download the PDF from the latest release and open it in
-presentation mode.
+Easiest option is to [download the PDF from the latest release](https://github.com/Bwc9876/git-from-scratch/releases/latest)
+and open it in presentation mode.
 
 ### Manually
 
