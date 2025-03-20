@@ -25,4 +25,4 @@ jobs:
         with:
           body: Please download the PDF from this release's assets
           files: git-from-scratch.pdf
-          tag: ${{inputs.tag}}
+          tag_name: ${{inputs.tag}}
