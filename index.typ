@@ -90,13 +90,14 @@ You’ll encounter Git no matter what field of CS you choose to pursue.
 == How does it Work?
 <how-does-it-work>
 
-Git has a very high-level interface that you may have used already.
+Git has a high-level interface that you may have used already.
 
 - Git allows you to take "snapshots" of your current project \(*commits*)
 - Commits are chained together to create a history \(*branches*)
-- Developers can create multiple branches to work on the project
+- Branches can diverge into multiple branches to work on the project
   simultaneously
-- After work is done, developers *merge* changes back to a common branch
+- Multiple branches can later be combined back into one, aggregating the changes
+  made in each
 
 Don't worry if you don't recognize these concepts, we'll come back to them
 later.
@@ -117,21 +118,24 @@ The Git command line interface (CLI) is split up into two types of commands.
 
 Git is a complicated system. Complicated systems can often be explained well with high-level abstractions and analogies.
 
-// TODO: Articulating how high-level guides can fall short in this paragraph
-
 However, the abstractions provided by many teaching materials with Git can often fall short. Misunderstandings
 of how Git works at a fundamental level results in a few pitfalls, which can lead to mistakes.
 
 To make a mistake is to potentially lose extremely important work or project history. To avoid these mistakes, this presentation will try to teach you the underlying concepts in Git and build up from there.
 
+= Git Repositories
+
 == Git Repositories
 <git-repository-structure>
 
-Any directory with a well-formed `.git/` folder is a *git repository*. You'll work on the current
-content of the directory when programming.
+Any directory with a well-formed `.git/` folder is a *git repository*.
 
-`.git` is a special folder however, it stores all of your repository’s history. `.git ` is written to and read
-from when you use various Git commands.
+`.git` stores all of your repository’s history and more.
+
+`.git ` is written to and read from when you use various Git commands.
+
+On Windows this folder is hidden by default. On MacOS and Linux it's
+hidden by default because of the `.` at the start.
 
 == `.git` Layout
 <-git-layout>
@@ -145,6 +149,8 @@ them.
 - `config`: A configuration file for this repository
 
 We’ll start out with the object store.
+
+= Objects - The Building Blocks of Git
 
 == Git Objects
 <the-object-store>
@@ -163,12 +169,14 @@ structure.
 == Content Addressed Storage
 
 Objects are *content-addressed* within the `.git/objects/` directory. "Content-addressed"
-means we reference things using a value that's somehow derived from that thing's contents.
-Content-addressed storage is implemented in Git using a SHA-1 hasging algorithm.
+means we refer to things using a value that's derived from that things contents.
+Content-addressed storage is implemented in Git using a SHA-1 hashing algorithm.
 
 SHA-1 is a bit technical but all we need to know is it takes content of any size and turns
 it into a 40-character long string of letters and numbers. Each generated string is unique
 to that piece of content.
+
+Ex: `Hello World!!` #sym.arrow `a6a7c8158b34d554954a4c921b144f82d75db683`
 
 == Object Storage in Git
 
@@ -193,7 +201,7 @@ That hash is split up...
 
 - #acc1[9a] becomes the name of a folder in `.git/objects/`
 - #acc2[143d55e...] becomes a file in that
-  folder, storing the cat inside
+  folder, storing the contents inside
 - So our full path to the object will be
   .git/objects/#acc1[9a]/#acc2[143d55e...]
 
@@ -272,9 +280,10 @@ Let’s consider a tree of this repo's files.
 
 (remember: #acc1[mode] #acc2[name]#acgrey[\\0]#acc3[hash])
 
+- #acc4[tree 171\\0]
 - #acc1[100644] #acc2[flake.lock]#acgrey[
     \\0
-  ]#acc3[824729cbedb829dea0442ab10905e32c57eee92d"]
+  ]#acc3[824729cbedb829dea0442ab10905e32c57eee92d]
 - #acc1[100644] #acc2[flake.nix]#acgrey[
     \\0
   ]#acc3[9280a82b299c535128ff06098d8e5b68a64032e2]
@@ -310,20 +319,7 @@ Since SHA-1 is good enough™, we can be sure that tree objects will never conta
 
 Git also supports SHA-256 hashing for objects, lessening the chances of a cycle/collision.
 
-== The Git Index - How `git add` works
-<the-git-index---how-git-add-works>
 
-Git keeps track of what changes you've made while working with an *index*.
-In order to add items to the index (and therefore make Git aware of changes),
-you need to *stage* them with `git add`.
-
-Git keeps track of your index with `.git/index`.
-This file is used to create a tree object when committing later.
-
-This file's format isn't too important, it's effectively just a list of files that have changed,
-and how they've changed.
-
-Eventually, our index will be serialized into a tree object.
 
 == Another Side Tangent - Content Addressed Storage is Awesome
 <another-side-tangent---content-addressed-storage-is-awesome>
@@ -338,6 +334,7 @@ hash.
 
 This #emph[does] mean whenever we update even one part of our project,
 we’ll likely have to recompute hashes for many different objects.
+
 
 == Commit Objects
 <commit-objects>
@@ -356,6 +353,7 @@ commit’s #acc3[message].
 
 Let’s look at an example commit.
 
+#acc4[commit 420\\0] \
 #acc1[tree] #acc2[a4177e2da6416bb490b75e9538f80251e81d820a] \
 #acc1[parent] #acc2[f8d431b5019ec9b6800e2591f3df11adcdffa734] \
 #acc1[author] #acc2[Ben C \<bwc9876\@gmail.com\> 1742067179 -0400] \
@@ -379,9 +377,8 @@ Here’s what each header means in this commit object:
 
 == Commit Parents
 
-`parent` is an important field. Using `parent`, we can create chains of commits with each
-on pointing to it's previous one (a linked list). This chain of commits represent the "history"
-of our project.
+Using `parent`, we can create chains of commits (a linked list).
+This chain of commits represent the history of our project.
 
 Commits can also have _multiple_ parents which represent a merging of two
 different histories. We'll explore merging a bit later.
@@ -392,9 +389,9 @@ example you'll always have one initial commit in your repository without a paren
 == Loose vs.~Packed Objects
 <loose-vs.-packed-objects>
 
-When you change a file and commit it, Git will create a new, separate object
+When a file changes between two commits, Git will create a new, separate object
 for the new state of that file. This behavior can waste a lot of
-space in large files, especially if you just change a few lines.
+space in large files, especially if you just change a few lines between commits.
 
 To reduce wasted space, Git will *pack* objects.
 Packed objects are stored as *deltas* (differences) from another object.
@@ -402,41 +399,38 @@ Packed objects are stored as *deltas* (differences) from another object.
 Object packing saves space by eliminating duplication of data.
 Additionally, it makes copying objects over the network faster.
 
+
+= Refs - Giving Objects Names
+
 == Refs
 <refs>
 
 For humans, referring to objects by their hash can be difficult.
 To make referring to objects easier, *refs* exist.
 
-Refs are human-named references to objects within the object store.
+Refs are human-friendly references to objects within the object store.
 
 Refs are primarily stored in `.git/refs`, each ref is a text
-file containing the object hash that the ref points to.
+file containing the object hash that the ref points to. The name
+of the file in `.git/refs` is the name of that ref.
 
-Refs primarily point to commit objects, but we'll see some special uses
-of refs later on.
+== Tags
 
-== Tags and Branches
-<branches-vs.-tags>
+A tag is a ref that points to a commit. A tag represents a *static* point in time
+such as a version.
 
-*Tags* and *branches* are both types of refs, and have different use-cases.
+For example, your project may have a tag called `v1.2.3`. This
+tag represents the contents of the project when version `1.2.3` was released.
 
-- #strong[Tags] statically point to commits for a project. Tags don't change target commits.
-  Tags areused for marking certain versions or releases (`.git/refs/heads`).
-- #strong[Branches] point to many different commits in a
-  project, showing in-progress changes or history (`.git/refs/tags`).
-
-Tags can also be a bit fancier than branches, they can point to _tag objects_.
+Primarily tags will point to commit objects. However, if you need to add
+additional metadata (like release notes) to a tag you can instead have the tag point to a *tag object*.
 
 == Tag Objects
 
 *Tag objects* add additional metadata to a tag such as a message, timestamp, author (tagger), and cryptographic signature.
 
-We usually create a tag that signifies a specific release/version
-of our project, like `v1.2.3`.
-
-We can use tag objects to add the change notes of this release
-to the tag. This way we know what features were added between that tag
+We can use tag objects to add the change notes of a release
+to a tag. This way we know what features were added between that tag
 and the last.
 
 == Tag Object Example
@@ -463,66 +457,36 @@ Most people never use tags for anything other than commits, however.
 
 == Branches (Heads)
 
-*Branches* represent an in-progress history of our project. You most likely
-have worked on a branch called `main` or `master` in the past. The *head* is
-the commit object the branch currently points to.
+*Branches* are a type of ref that represent an in-progress history of our project.
 
-Branches allow multiple people to work on a project at once.
-*Feature branches* refer to branches made to add a feature to a project.
-For example you may have a branch called `fix-accessibility` that
-a developer will work on to add accessibility features to a website.
+A branch points to a single commit, that commit's parent and grandparents then
+represents the "history" of that branch.
 
-== Combining Branches - Merging
-
-Often times we'll want to take changes from one or more other branches and apply
-them to the current one.
-
-One way of doing this is a *merge* commit. This is a commit that will has two parents: the head of
-the current branch and the head of the other branch.
-By giving the commit two parents, we're saying it's a result of both histories.
-
-If two branches share a common history and one is just behind the other,
-a *fast-forward* occurs. This doesn't create a new commit and sets
-the "behind" branch to point to the head of the source branch.
-
-== Combining Branches - Rebasing
-
-An alternative to merging is a *rebase*. Rebasing applies commits
-from one branch to another, without making a merge commit. This is effectively just copying
-and pasting changes from one branch to another.
-
-Rebasing can do a lot more than just combine branches, however. Another common use case
-is to squash a set of commits into one, cleaning up your history. A very user-friendly way
-to do complex rebasing is `git rebase -i [commit-ish]`. This will open up an editor that lets
-you interactively rebase the commits specified.
+The most recent commit in a branch (the commit the branch is currently pointed to) is
+called the *head* of the branch.
 
 == Symbolic Refs and `HEAD`
 <symbolic-refs-and-head>
 
 Another type of ref is a *symbolic ref*. These refs can only
-point to other refs. The most common example of this is `HEAD`, stored
-in `.git/HEAD`.
+point to other refs.
 
-`HEAD` points to the current working branch. The working branch is updated whenever we run `git commit` to point
-to the new commit object.
+A common example of a symbolic ref is `HEAD`, stored
+in `.git/HEAD`. `HEAD` is a text file containing the
+path to a branch inside of `.git/refs`.
+
+The branch `HEAD` points to is called the *working branch*. The working
+branch will automatically point to any new commits we make.
 
 When we change `HEAD` to point to something else, we're performing a *switch*.
 
-== Checking Out Trees
-
-The act of replacing the current project with one from a tree object is called a
-*checkout*. You can checkout any refs, trees, commits, and tags.
-
-- Checking out an object with `git checkout` will also switch `HEAD` to that object by default.
-- Additionally, switching to a branch with `git switch` will also checkout that branch by default.
-
 == Attached and Detached `HEAD`
 
-`HEAD` can have different state depending on what you have checked out.
+`HEAD` can have different states depending on what you have it set to.
 
-- Upon checking out a *branch*, `HEAD` is made *symbolic* and updated to point to it. Any commits made while `HEAD` has
-  a branch checked out will update that ref to point to the new commit.
-- Upon checking out a *tag* or *commit* directly, `HEAD` is made to *directly* point to the object hash.
+- When set to a *branch*, `HEAD` is made symbolic and points to the branch name. Any commits made while `HEAD` is
+  pointed to a branch will update that branch to point to the new commit.
+- When set to a *tag* or *commit* directly, `HEAD` will point to the object hash.
   This results in a "Detached `HEAD`" state, which means commits we make won’t affect any specific branch.
 
 == Rev Parse
@@ -531,27 +495,40 @@ The act of replacing the current project with one from a tree object is called a
 Often times when working with Git porcelain commands you’ll be told to
 enter a commit-ish or a tree-ish value.
 
-- #emph[tree];-ish: A reference to a tree object, this includes a
-  ref, a tag object, or a commit object
-- #emph[commit];-ish: Reference to a commit object, this can be a ref or
-  a tag object
+- #emph[tree];-ish: A reference to a tree object. This includes a
+  tree object, a tag object, a commit object, or a ref to any of these.
+- #emph[commit];-ish: Reference to a commit object. This can be a commit object,
+  a tag object, or a ref to any of these.
 
 If you’re ever curious how Git will resolve a given value, you can use
 the `rev-parse` command to see what Git evaluates it as. `rev-parse`
 will output the object hash that the given string points to.
 
----
+= Checkouts - Getting Changes
 
-Here are some useful tips for referring to objects.
+== Checking Out
 
-+ You can refer to the tree of a commit directly by appending `^{tree}`,
-  so `HEAD^{tree}` would be the tree object of the current branch’s
-  head.
-+ You can refer to a given commit’s parent by using `~`, doing multiple
-  `~`’s will go back further. You can even put numbers after the `~` to
-  specify how many parents to jump back. For example
-  `git checkout HEAD~` will checkout the commit #emph[before] the current
-  one.
+The act of replacing the current working directory with one from a commit is called a
+*checkout*. You can checkout any *commit-ish* object (commits, refs to commits, tag objects pointing to commits).
+
+- Checking out an object with `git checkout` will also switch `HEAD` to that object by default.
+- Additionally, switching to a branch with `git switch` will also checkout that branch into the working tree by default.
+
+= Putting it Together - Committing Changes
+
+== The Git Index - How do we get a tree?
+<the-git-index---how-git-add-works>
+
+Git keeps track of what changes you've made while working with an *index*.
+In order to add items to the index (and therefore make Git aware of changes),
+you need to *stage* them with `git add`.
+
+Git stores your index in `.git/index`. This uses the *dircache* format which is simply
+a list of tracked changes. We won't get into the details of dircache.
+
+When committing, our index will be
+serialized into a tree object. The new tree object will then be referenced
+in the `tree` field of our new commit.
 
 == How `git commit` Works
 
@@ -562,45 +539,42 @@ Here are some useful tips for referring to objects.
 + Create a new commit, pointing to the new tree object, and with the
   `parent` set to the previous commit (if it exists).
   \(`git commit-tree [tree] -p [parent]`)
-+ Update the branch that `HEAD` references to point to our new commit
++ Update the branch in `HEAD` to point to the new commit
   object \(only if `HEAD` actually points to a branch)
   \(`git update-ref HEAD [new commit]`)
 
+= Combining Branches - Aggregating Changes
 
-== Restore vs.~Reset vs.~Revert
-<restore-vs.-reset-vs.-revert>
+== Merging
 
-These three commands are often confused with eachother and it can be a
-bit difficult to tell exactly what they do without knowing Git’s
-underlying system.
+Often times we'll want to take changes from one or more other branches and apply
+them to the current one. The most common way to do this is `git merge [source]`.
 
-Some important terms:
+`git merge` creates a *merge* commit. This is a commit that will has two parents: the head of
+the current branch and the head of the other branch.
+By giving the commit two parents, we're saying it's a result of both histories.
 
-- `HEAD`: the current head of the branch you're working on
-- index: the staging area that files get added to with `git add`
-- working tree: the current structure of your project, unstaged changes
+== Fast Forwarding
 
----
+If two branches share a common history and one is just behind the other,
+a *fast-forward* occurs. This doesn't create a new commit and sets
+the current branch to point to the head of the source branch.
 
-With this in mind let’s break down each command.
+`git merge` will automatically fast forward if it detects that the current branch's history
+has not diverged from the source branch.
 
-- `git restore`: This command will update files in your working tree
-  with data from your index
-- `git restore --staged`: This command updates your index from the
-  `HEAD` or any given commit
+== Rebasing
 
----
+An alternative to merging is a *rebase*. Rebasing applies commits
+from one branch to another, without making a merge commit. This is effectively just copying
+and pasting changes from one branch to another.
 
-- `git reset [path]`: This command also updates your index from a
-  commit, `restore --staged` is the newer interface
-- `git reset [commit]`: This command will set `HEAD` to a given commit,
-  along with the index
-  - `git reset --soft`: Don’t update the index, only update `HEAD`
-  - `git reset --mixed`: Update the index and `HEAD` \(default)
-  - `git reset --hard`: Also update the working tree, meaning a
-    #strong[FULL] reset to `[commit]`
-- `git revert`: Create a new commit that undoes the changes a previous
-  commit made
+Rebasing can do a lot more than just combine branches, however. A user-friendly way
+to do complex rebasing is `git rebase -i [source]`. This will open an editor that lets
+you interactively rebase the commits specified.
+
+
+= Remotes - Sharing Changes
 
 == Remote Refs
 <remote-refs>
@@ -675,19 +649,16 @@ When pushing:
 
 == Conclusion
 
-This presentation went over the main parts of Git inside and out. We learned about...
+This presentation went over the main parts of Git inside and out. We learned about:
 
 + The object store
 + The types of objects (blob, tree, commit, tag)
 + The Git index
 + Refs and `HEAD`
 + Combining branches with `merge` and `rebase`
-+ `restore`, `reset`, and `revert`
 + Remote refs and tracking branches
 
 == References and Resources
-
-Thank you for listening!
 
 - Pro Git: #link("https://git-scm.com/book/en/v2")
 - Write Yourself a Git!: #link("https://wyag.thb.lt/")
